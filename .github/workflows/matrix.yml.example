@@ -1,0 +1,60 @@
+name: IDX Valuation Pipeline (Matrix per Sektor)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VARIAN PARALEL — direkomendasikan untuk 950 saham.
+# Tiap sektor jadi job terpisah yang berjalan paralel, sehingga:
+#   - jauh lebih cepat & aman dari batas waktu 6 jam per job,
+#   - satu sektor gagal tidak menggagalkan sektor lain (fail-fast: false),
+#   - tiap runner punya IP sendiri -> risiko rate-limit yfinance lebih kecil.
+#
+# Pakai SALAH SATU saja: main.yml (single job) ATAU file ini. Jangan dua-duanya
+# aktif dengan jadwal sama agar tidak dobel jalan.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: "30 6 * * 6"      # Sabtu 13:30 WIB (06:30 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  valuation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false         # sektor lain tetap lanjut walau satu gagal
+      max-parallel: 6          # batasi paralelisme agar ramah kuota API
+      matrix:
+        sector:
+          - BASIC
+          - CYCLIC
+          - ENERGY
+          - FINANCE
+          - HEALTH
+          - INDUST
+          - INFRA
+          - NONCYC
+          - PROPERT
+          - TECHNO
+          - TRANS
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sector ${{ matrix.sector }}
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          SPREADSHEET_ID: ${{ vars.SPREADSHEET_ID }}
+          SECTORS: ${{ matrix.sector }}
+        run: python main.py
