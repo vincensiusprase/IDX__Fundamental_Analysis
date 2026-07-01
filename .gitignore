@@ -1,0 +1,16 @@
+# ── KREDENSIAL — JANGAN PERNAH DI-COMMIT ──
+service_account.json
+*.json.key
+.env
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Data output lokal (opsional)
+*.csv.local
